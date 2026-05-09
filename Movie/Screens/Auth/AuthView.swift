@@ -8,19 +8,29 @@
 import SwiftUI
 
 struct AuthView: View {
-    @State private var isSignIn = false
+    @State private var isShowingSignUp = false
     
+    private let repository: AuthRepository
+    private let signIn: SignInUseCase
+    private let signUp: SignUpUseCase
+    
+    init(repository: AuthRepository = FirebaseAuthRepository()) {
+        self.repository = repository
+        self.signIn = SignInUseCase(repository: repository)
+        self.signUp = SignUpUseCase(repository: repository)
+    }
+        
     var body: some View {
         ZStack{
-            if isSignIn {
-                SignUp(isSignIn: $isSignIn)
+            if isShowingSignUp {
+                SignUpView(isSignIn: $isShowingSignUp, signUpUseCase: signUp)
                     .transition(.move(edge: .trailing))
             } else {
-                SignIn(isSignIn: $isSignIn)
+                SignInView(isSignIn: $isShowingSignUp, signInUseCase: signIn)
                     .transition(.move(edge: .leading))
             }
         }
-        .animation(.default, value: isSignIn)
+        .animation(.default, value: isShowingSignUp)
     }
 }
 

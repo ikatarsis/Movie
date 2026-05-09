@@ -6,26 +6,14 @@
 //
 
 import SwiftUI
-import FirebaseAuth
 
 struct SignInView: View {
-    @State private var email = ""
-    @State private var password = ""
-    @State private var authError: String?
     @Binding var isSignIn: Bool
+    @StateObject private var viewModel: SignInViewModel
     
-    private let emailRegex = /^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,64}$/
-    
-    func validateEmail() {
-        if email.isEmpty {
-            authError = "Поле не может быть пустым"
-            return
-        }
-        if email.wholeMatch(of: emailRegex) != nil {
-            authError = nil
-        } else {
-            authError = "Неверный формат email"
-        }
+    init(isSignIn: Binding<Bool>, signInUseCase: SignInUseCase) {
+        _isSignIn = isSignIn
+        _viewModel = StateObject(wrappedValue: SignInViewModel(signIn: signInUseCase))
     }
     
     var body: some View {
@@ -34,39 +22,36 @@ struct SignInView: View {
                 .font(.largeTitle)
                 .bold()
             
-            TextField("Email", text: $email)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
+            TextField("Email", text: $viewModel.email)
+                .textFieldStyle(.roundedBorder)
                 .keyboardType(.emailAddress)
-                .autocapitalization(.none)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
             
-            TextField("Password", text: $password)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .keyboardType(.default)
-                .autocapitalization(.none)
+            SecureField("Password", text: $viewModel.password)
+                .textFieldStyle(.roundedBorder)
             
             Button {
-                authError = nil
-                Task {
-                        do {
-                            try await Auth.auth().signIn(withEmail: email, password: password)
-                        } catch {
-                            authError = error.localizedDescription
-                        }
-                    }
+                Task { await viewModel.submit() }
             } label: {
-                Text("Войти")
+                Text(viewModel.isLoading ? "Загрузка..." : "Войти")
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.blue)
                     .foregroundColor(.white)
                     .cornerRadius(10)
             }
+            .disabled(!viewModel.canSubmit)
+            
+            if let message = viewModel.errorMessage {
+                            Text(message)
+                                .foregroundColor(.red)
+                                .font(.footnote)
+                        }
             
             HStack {
                 Text("Нет аккаунта?")
-                Button("Зарегестрироваться") {
-                    isSignIn = true
-                }
+                Button("Зарегестрироваться") { isSignIn = true }
                 .foregroundColor(.blue)
             }
             
@@ -76,5 +61,11 @@ struct SignInView: View {
 }
 
 #Preview {
-    SignInView(isSignIn: .constant(false))
-}
+    struct MockAuthRepository: AuthRepository {
+            func signIn(email: String, password: String) async throws {}
+            func signUp(email: String, password: String) async throws {}
+            func signOut() throws {}
+        }
+    
+    let useCase = SignInUseCase(repository: MockAuthRepository())
+    return SignInView(isSignIn: .constant(false), signInUseCase: useCase)}

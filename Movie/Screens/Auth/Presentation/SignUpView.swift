@@ -6,107 +6,97 @@
 //
 
 import SwiftUI
-import FirebaseAuth
 
 struct SignUpView: View {
-    @State private var email = ""
-    @State private var password = ""
-    @State private var confirmPassword = ""
-    @State private var authError: String?
-    @State private var isLoading: Bool = false
     @Binding var isSignIn: Bool
+    @StateObject private var viewModel: SignUpViewModel
+    
+    init(isSignIn: Binding<Bool>, signUpUseCase: SignUpUseCase){
+        _isSignIn = isSignIn
+        _viewModel = StateObject(wrappedValue: SignUpViewModel(signUp: signUpUseCase))
+    }
     
     var body: some View {
-    VStack(spacing: 20) {
-        Text("Регистрация")
-            .font(.largeTitle)
-            .bold()
-        
-        TextField("Email", text: $email)
-            .textFieldStyle(RoundedBorderTextFieldStyle())
-            .keyboardType(.emailAddress)
+        VStack(spacing: 20) {
+            Text("Регистрация")
+                .font(.largeTitle)
+                .bold()
+            
+            TextField("Email", text: $viewModel.email)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .keyboardType(.emailAddress)
             // запрещает автоматически делать первую букву строки или слов заглавной
-            .textInputAutocapitalization(.never)
+                .textInputAutocapitalization(.never)
             // отключает автокоррекцию (T9)
-            .autocorrectionDisabled()
-        
-        SecureField("Пароль", text: $password)
-            .textFieldStyle(RoundedBorderTextFieldStyle())
-            .keyboardType(.default)
-        
-        SecureField("Повторите пароль", text: $confirmPassword)
-            .textFieldStyle(RoundedBorderTextFieldStyle())
-            .keyboardType(.default)
-        
-        Button {
-            Task{
-                await register()
+                .autocorrectionDisabled()
+
+            if let text = viewModel.emailFieldError {
+                Text(text)
+                    .foregroundColor(.red)
+                    .font(.callout)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-        } label: {
-            Text(isLoading ? "Загрузка..." : "Зарегистрироваться")
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-        }
-        .disabled(isLoading)
+            
+            SecureField("Пароль", text: $viewModel.password)
+                .textFieldStyle(.roundedBorder)
+                .keyboardType(.default)
 
-        if let authError {
-            Text(authError)
-                .foregroundColor(.red)
-                .font(.footnote)
-        }
-        
-        HStack {
-            Text("Есть аккаунт?")
-            Button("Войти") {
-                isSignIn = false
+            if let text = viewModel.passwordFieldError {
+                Text(text)
+                    .foregroundColor(.red)
+                    .font(.footnote)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .foregroundColor(.blue)
+            
+            SecureField("Повторите пароль", text: $viewModel.confirmPassword)
+                .textFieldStyle(.roundedBorder)
+                .keyboardType(.default)
+
+            if let text = viewModel.confirmPasswordFieldError {
+                Text(text)
+                    .foregroundColor(.red)
+                    .font(.footnote)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            
+            Button {
+                Task{  await viewModel.submit() }
+            } label: {
+                Text(viewModel.isLoading ? "Загрузка..." : "Зарегистрироваться")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            .disabled(!viewModel.canSubmit)
+            
+            if let message = viewModel.errorMessage {
+                Text(message)
+                    .foregroundColor(.red)
+                    .font(.footnote)
+            }
+            
+            HStack {
+                Text("Есть аккаунт?")
+                Button("Войти") { isSignIn = false }
+                    .foregroundColor(.blue)
+            }
+            
         }
-        
-    }
-    .padding()
-}
-
-    private func register() async {
-        authError = nil
-
-        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedEmail.isEmpty else {
-            authError = "Введите email"
-            return
-        }
-
-        guard !password.isEmpty, !confirmPassword.isEmpty else {
-            authError = "Введите пароль и подтверждение"
-            return
-        }
-
-        guard password == confirmPassword else {
-            authError = "Пароли не совпадают"
-            return
-        }
-
-        guard password.count >= 6 else {
-            authError = "Пароль должен быть минимум 6 символов"
-            return
-        }
-
-        isLoading = true
-        defer { isLoading = false }
-
-        do {
-            try await Auth.auth().createUser(withEmail: trimmedEmail, password: password)
-            isSignIn = false
-        } catch {
-            authError = error.localizedDescription
+        .padding()
+        .onChange(of: viewModel.didComplete) { _, done in
+            if done { isSignIn = false }
         }
     }
-}
-
-#Preview {
-    SignUpView(isSignIn: .constant(true))
+    
+    #Preview {
+        struct MockAuthRepository: AuthRepository {
+            func signIn(email: String, password: String) async throws {}
+            func signUp(email: String, password: String) async throws {}
+            func signOut() throws {}
+        }
+        
+        let useCase = SignUpUseCase(repository: MockAuthRepository())
+        return SignUpView(isSignIn: .constant(true), signUpUseCase: useCase)}
 }
