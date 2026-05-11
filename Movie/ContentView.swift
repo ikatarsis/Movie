@@ -11,6 +11,7 @@ import FirebaseAuth
 struct ContentView: View {
     @State private var showProfile = false
     @EnvironmentObject private var authSession: AuthSession
+    
     var body: some View {
         ZStack{
             TabView{

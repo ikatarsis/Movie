@@ -18,6 +18,14 @@ extension AuthError {
         case .emailAlreadyExists: return "Этот email уже используется"
         case .network: return "Проверьте интернет-соединение"
         case .unknown(let message): return message
+        case .bioAuthNotConfigured:
+            return "Бекенд решил не настраиваться"
+        case .bioAuthUnavailable:
+            return "Face Id недоступен"
+        case .bioAuthCanceled:
+            return "Face Id отменен"
+        case .bioAuthRemote(let message):
+            return message
         }
     }
 }

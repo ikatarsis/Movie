@@ -20,4 +20,9 @@ enum AuthError: Error, Equatable {
     
     case network
     case unknown(message: String)
+    
+    case bioAuthNotConfigured
+    case bioAuthUnavailable
+    case bioAuthCanceled
+    case bioAuthRemote(message: String)
 }

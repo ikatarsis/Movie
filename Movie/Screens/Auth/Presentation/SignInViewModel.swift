@@ -16,6 +16,7 @@ final class SignInViewModel: ObservableObject {
     
     @Published private(set) var isLoading = false
     @Published private(set) var error: AuthError?
+    @Published private(set) var didSignInSucceed = false
     
     private let signIn: SignInUseCase
     
@@ -33,11 +34,13 @@ final class SignInViewModel: ObservableObject {
     
     func submit() async {
         self.error = nil
+        didSignInSucceed = false
         self.isLoading = true
         defer { self.isLoading = false }
         
         do {
             try await signIn.execute(email: email, password: password)
+            didSignInSucceed = true
         } catch let authError as AuthError {
             self.error = authError
         } catch let err {

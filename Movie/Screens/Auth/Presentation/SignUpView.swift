@@ -95,6 +95,7 @@ struct SignUpView: View {
             func signIn(email: String, password: String) async throws {}
             func signUp(email: String, password: String) async throws {}
             func signOut() throws {}
+            func signIn(withCustomToken token: String) async throws {}
         }
         
         let useCase = SignUpUseCase(repository: MockAuthRepository())

@@ -17,6 +17,14 @@ final class FirebaseAuthRepository: AuthRepository {
         }
     }
     
+    func signIn(withCustomToken token: String) async throws {
+        do {
+            _ = try await Auth.auth().signIn(withCustomToken: token)
+        } catch {
+            throw map(error)
+        }
+    }
+    
     func signUp(email: String, password: String) async throws{
         do {
             _ = try await Auth.auth().createUser(withEmail: email, password: password)

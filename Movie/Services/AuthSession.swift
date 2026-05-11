@@ -27,5 +27,7 @@ final class AuthSession: ObservableObject {
     }
     func signOut() {
         try? Auth.auth().signOut()
+        BioQuickSignInStorage.clear()
+        BioRefreshTokenKeychain().deleteRefreshToken()
     }
 }
