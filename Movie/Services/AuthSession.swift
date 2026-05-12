@@ -25,8 +25,12 @@ final class AuthSession: ObservableObject {
             Auth.auth().removeStateDidChangeListener(listenerHandle)
         }
     }
+    // разлогиниваем firebase-session
     func signOut() {
         try? Auth.auth().signOut()
+    }
+    // очищаем keychain и userDefaults
+    func disableQuickSignIn() {
         BioQuickSignInStorage.clear()
         BioRefreshTokenKeychain().deleteRefreshToken()
     }

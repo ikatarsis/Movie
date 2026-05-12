@@ -16,15 +16,18 @@ final class BioAuthAPIClient {
     
     func mintBioRefreshToken(idToken: String) async throws -> String {
         let url = try BioAuthConfig.url(path: "mintBioRefreshToken")
+        print("[FaceID] POST:", url.absoluteString)
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
         req.httpBody = Data("{}".utf8)
-        
         let (data, resp) = try await session.data(for: req)
-        try throwIfHTTPError(data:data, response: resp)
-        
+        if let http = resp as? HTTPURLResponse {
+            print("[FaceID] response status:", http.statusCode)
+            print("[FaceID] response body:", String(data: data, encoding: .utf8) ?? "<empty>")
+        }
+        try throwIfHTTPError(data: data, response: resp)
         let decoded = try JSONDecoder().decode(MintBioRefreshResponse.self, from: data)
         return decoded.refreshToken
     }

@@ -18,35 +18,41 @@ final class BioRefreshTokenKeychain {
     private let account = "primary"
     
     func saveRefreshToken(_ token: String) throws {
-            deleteRefreshToken()
-            var error: Unmanaged<CFError>?
-            guard let access = SecAccessControlCreateWithFlags(
-                nil,
-                kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-                [.biometryCurrentSet],
-                &error
-            ) else {
-                throw AuthError.bioAuthUnavailable
-            }
-            guard let data = token.data(using: .utf8) else {
-                throw AuthError.bioAuthRemote(message: "Неверный токен")
-            }
-            let query: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: service,
-                kSecAttrAccount as String: account,
-                kSecValueData as String: data,
-                kSecAttrAccessControl as String: access,
-            ]
-            let status = SecItemAdd(query as CFDictionary, nil)
-            guard status == errSecSuccess else {
-                throw BioRefreshTokenKeychainError.unexpectedStatus(status)
-            }
+        print("[FaceID] saving token to keychain")
+        deleteRefreshToken()
+        var error: Unmanaged<CFError>?
+        guard let access = SecAccessControlCreateWithFlags(
+            nil,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            [.biometryCurrentSet],
+            &error
+        ) else {
+            print("[FaceID] SecAccessControlCreateWithFlags failed:", String(describing: error))
+            throw AuthError.bioAuthUnavailable
         }
+        guard let data = token.data(using: .utf8) else {
+            throw AuthError.bioAuthRemote(message: "Неверный токен")
+        }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: data,
+            kSecAttrAccessControl as String: access,
+            kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
+        ]
+        let status = SecItemAdd(query as CFDictionary, nil)
+        print("[FaceID] SecItemAdd status:", status)
+        guard status == errSecSuccess else {
+            throw BioRefreshTokenKeychainError.unexpectedStatus(status)
+        }
+    }
     
     func readRefreshToken(reason: String) throws -> String {
             let context = LAContext()
             context.localizedCancelTitle = "Отмена"
+            context.localizedReason = reason
+        
             let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
@@ -54,7 +60,7 @@ final class BioRefreshTokenKeychain {
                 kSecReturnData as String: true,
                 kSecMatchLimit as String: kSecMatchLimitOne,
                 kSecUseAuthenticationContext as String: context,
-                kSecUseOperationPrompt as String: reason,
+                kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
             ]
             var item: CFTypeRef?
             let status = SecItemCopyMatching(query as CFDictionary, &item)
@@ -77,6 +83,7 @@ final class BioRefreshTokenKeychain {
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
                 kSecAttrAccount as String: account,
+                kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
             ]
             SecItemDelete(query as CFDictionary)
         }
