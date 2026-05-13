@@ -7,11 +7,35 @@
 
 import SwiftUI
 
+enum SearchSort: Hashable, CaseIterable {
+    case ratingDesc
+    case voteDesc
+}
+
 struct SearchView: View {
     @State private var searchByMovies = true
     @State private var searchText = ""
-    private let searchViewModel = SearchViewModel()
+    
     @State private var navigationPath = NavigationPath()
+    
+    @State private var sort: SearchSort = .ratingDesc
+    @State private var minRating: Double = 0.0
+    @State private var minVoteCount: Int = 0
+    
+    
+    private let searchViewModel = SearchViewModel()
+    private var filteredTitles: [Title] {
+        let filtered = searchViewModel.searchTitles.filter { t in
+            (t.voteAverage ?? 0) >= minRating &&
+            (t.voteCount ?? 0) >= minVoteCount
+        }
+        switch sort {
+        case .ratingDesc:
+            return filtered.sorted { ($0.voteAverage ?? -1) > ($1.voteAverage ?? -1) }
+        case .voteDesc:
+            return filtered.sorted { ($0.voteCount ?? -1) > ($1.voteCount ?? -1) }
+        }
+    }
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -24,12 +48,24 @@ struct SearchView: View {
                         .clipShape(.rect(cornerRadius: 10))
                 }
                 LazyVGrid(columns: [GridItem(), GridItem(),GridItem()]) {
-                    ForEach(searchViewModel.searchTitles) { title in
+                    ForEach(filteredTitles) { title in
                         AsyncImage(url: URL(string: title.posterPath ?? "")) { image in
                             image
                                 .resizable()
                                 .scaledToFit()
                                 .clipShape(.rect(cornerRadius: 10))
+                                .overlay(alignment: .topTrailing) {
+                                    if let r = title.voteAverage, r > 0 {
+                                    Text(String(format: "%.1f", r))
+                                        .font(.caption.weight(.semibold))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 3)
+                                        .background(.black.opacity(0.6))
+                                        .foregroundStyle(.white)
+                                        .clipShape(.capsule)
+                                        .padding(6)
+                                    }
+                                }
                         } placeholder: {
                             ProgressView()
                         }
@@ -39,6 +75,23 @@ struct SearchView: View {
                         }
                     }
                 }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                HStack {
+                    Menu {
+                        Picker("Sort", selection: $sort) {
+                            Text("Rating").tag(SearchSort.ratingDesc)
+                            Text("Votes").tag(SearchSort.voteDesc)
+                        }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                    }
+                    .buttonStyle(.bordered)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(.bar)
             }
             .navigationTitle(searchByMovies ? Constants.movieSearchString : Constants.tvSearchString)
             .toolbar {

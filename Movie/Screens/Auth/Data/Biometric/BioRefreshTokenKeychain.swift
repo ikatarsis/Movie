@@ -17,22 +17,26 @@ final class BioRefreshTokenKeychain {
     private let service = "com.MovieBuild.Movie.bioRefresh"
     private let account = "primary"
     
+    // токен хранится не в UserDefaults, а в системном защищенном хранилище
+    // он привзан к текущему набору биометрии .biometryCurrentSet
     func saveRefreshToken(_ token: String) throws {
-        print("[FaceID] saving token to keychain")
         deleteRefreshToken()
+        
         var error: Unmanaged<CFError>?
+        
         guard let access = SecAccessControlCreateWithFlags(
             nil,
             kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
             [.biometryCurrentSet],
             &error
         ) else {
-            print("[FaceID] SecAccessControlCreateWithFlags failed:", String(describing: error))
             throw AuthError.bioAuthUnavailable
         }
+        
         guard let data = token.data(using: .utf8) else {
             throw AuthError.bioAuthRemote(message: "Неверный токен")
         }
+        
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -42,7 +46,7 @@ final class BioRefreshTokenKeychain {
             kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
-        print("[FaceID] SecItemAdd status:", status)
+
         guard status == errSecSuccess else {
             throw BioRefreshTokenKeychainError.unexpectedStatus(status)
         }

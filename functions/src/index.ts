@@ -76,6 +76,10 @@ export const mintBioRefreshToken = onRequest({ cors: true }, async (req, res) =>
         res.status(401).json({ error: "Unauthorized" });
     }
 });
+
+// - сервак получает refresh token от клиента. хеширует его. ищет документ в Firestore.
+// - если док есть и не истек, то удаляем старый токен, создаем новый и выдает customToken для Firebase
+// - если токена нет, то возвращается 401 ошибка
 export const exchangeBioRefreshToken = onRequest({ cors: true }, async (req, res) => {
     try {
         if (req.method !== "POST") {

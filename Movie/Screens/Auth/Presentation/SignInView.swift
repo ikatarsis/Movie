@@ -44,6 +44,7 @@ struct SignInView: View {
                 .font(.subheadline)
 
             Button {
+                // 1. Если обычный логин сейчас будет успешным, после него включи quick sign-in
                 Task { await viewModel.submit() }
             } label: {
                 Text(viewModel.isLoading ? "Загрузка..." : "Войти")
@@ -91,25 +92,17 @@ struct SignInView: View {
                     .foregroundColor(.blue)
             }
         }
+        // 2. Запуск настройки quick sign-in
         .onChange(of: viewModel.didSignInSucceed) { _, ok in
-            print("[FaceID] didSignInSucceed:", ok, "toggle:", enableBioQuickSignIn)
 
             guard ok, enableBioQuickSignIn else { return }
             Task {
                 do {
-                    print("[FaceID] calling enableQuickSignIn()")
-
                     try await bioCoordinator.enableQuickSignIn()
-                    print("[FaceID] enableQuickSignIn() success")
-
                     bioSetupMessage = nil
                 } catch let e as AuthError {
-                    print("[FaceID] enableQuickSignIn() AuthError:", e)
-
                     bioSetupMessage = e.userMessage
                 } catch {
-                    print("[FaceID] enableQuickSignIn() error:", error)
-
                     bioSetupMessage = error.localizedDescription
                 }
             }

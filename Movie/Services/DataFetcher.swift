@@ -20,7 +20,6 @@ struct DataFetcher {
             throw NetforkError.urlBuildFailed
         }
         
-        print(fetchTitlesURL)
         var titles = try await fetchAndDecode(url: fetchTitlesURL, type: TMDBAPIObject.self).results
         
         Constants.addPosterPath(to: &titles)
@@ -44,9 +43,7 @@ struct DataFetcher {
         ]) else {
             throw NetforkError.urlBuildFailed
         }
-        
-        print(fetchVideoURL)
-        
+                
         return try await fetchAndDecode(url: fetchVideoURL, type: YouTubeSearchResponse.self).items?.first?.id?.videoId ?? ""
     }
     

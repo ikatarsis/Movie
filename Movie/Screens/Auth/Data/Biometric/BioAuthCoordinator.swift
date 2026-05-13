@@ -27,24 +27,26 @@ final class BioAuthCoordinator {
         self.authRepository = authRepository
     }
     
-    /// После успешного email/password и включённого тумблера
+    // 3. Берется текущий Firebase.currentUser
+    // - вытаскиваем idToken
+    // - idToken уходит на бек в mintBioRefreshToken
+    // - бек проверяет, что пользак настоящий
+    // - бек создает специальный токен
+    // - возвращает нам. Мы сохраняем в Keychaim
+    // - BioQuickDignInStorage.isEnabled = true
     func enableQuickSignIn() async throws {
-        print("[FaceID] enableQuickSignIn start")
+        
         let url = try BioAuthConfig.url(path: "mintBioRefreshToken")
-        print("[FaceID] mint URL:", url.absoluteString)
+        
         guard let user = Auth.auth().currentUser else {
-            print("[FaceID] currentUser is nil")
             throw AuthError.bioAuthRemote(message: "Нет активной сессии")
         }
-        print("[FaceID] currentUser uid:", user.uid)
+        
         let idToken = try await user.idTokenForcingRefresh(false)
-        print("[FaceID] idToken received, length:", idToken.count)
         let refresh = try await api.mintBioRefreshToken(idToken: idToken)
-        print("[FaceID] refresh token received, length:", refresh.count)
+        
         try keychain.saveRefreshToken(refresh)
-        print("[FaceID] keychain save success")
         BioQuickSignInStorage.isEnabled = true
-        print("[FaceID] BioQuickSignInStorage set to true")
     }
     
     func disableQuickSignIn() {
